@@ -417,5 +417,3 @@ class TestCommands(TestCase):
         # Check if the context was added
         self.assertIn("my title", coder.additional_context.keys())
         self.assertTrue(coder.additional_context["my title"] == "my content")
-
-        commands.cmd_context('{"title": "my title", "content": "my content"}')
