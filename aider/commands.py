@@ -265,7 +265,7 @@ class Commands:
         res = list(map(str, matched_files))
         return res
 
-    def cmd_context(self, args):
+    def cmd_ctx(self, args):
         try:
             args = json.loads(args)
         except:
