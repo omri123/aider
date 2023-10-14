@@ -402,3 +402,20 @@ class TestCommands(TestCase):
             commands.cmd_add(f'"{fname}"')
 
             self.assertIn(str(fname.resolve()), coder.abs_fnames)
+
+    def test_cmd_context(self):
+        # Initialize the Commands and InputOutput objects
+        io = InputOutput(pretty=False, yes=True)
+        from aider.coders import Coder
+
+        coder = Coder.create(models.GPT35, None, io)
+        commands = Commands(io, coder)
+
+        # Call the cmd_context method
+        commands.cmd_context('{"title": "my title", "content": "my content"}')
+
+        # Check if the context was added
+        self.assertIn("my title", coder.additional_context.keys())
+        self.assertTrue(coder.additional_context["my title"] == "my content")
+
+        commands.cmd_context('{"title": "my title", "content": "my content"}')

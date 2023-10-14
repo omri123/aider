@@ -265,6 +265,26 @@ class Commands:
         res = list(map(str, matched_files))
         return res
 
+    def cmd_context(self, args):
+        try:
+            args = json.loads(args)
+        except:
+            self.io.tool_error("Invalid json format for context item")
+            return
+        
+        try:
+            title = args["title"]
+            content = args["content"]
+        except:
+            self.io.tool_error("Invalid json format for context item")
+            return
+
+        if title in self.coder.additional_context.keys():
+            self.io.tool_error(f'Context item with title "{title}" already exists.')
+            return
+        self.coder.additional_context[title] = content
+        self.io.tool_output(f'Added context item "{title}" to the chat')
+
     def cmd_add(self, args):
         "Add matching files to the chat session using glob patterns"
 
