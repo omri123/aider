@@ -18,6 +18,7 @@ CACHE_PATH = "~/.aider.send.cache.v1"
 CACHE = None
 # CACHE = Cache(CACHE_PATH)
 
+LOG_PATH = ".aider.request-logs.jsonl"
 
 @backoff.on_exception(
     backoff.expo,
@@ -60,6 +61,9 @@ def send_with_retries(model_name, messages, functions, stream):
 
     if not stream and CACHE is not None and key in CACHE:
         return hash_object, CACHE[key]
+
+    with open(LOG_PATH, "a") as f:
+        f.write(json.dumps(kwargs) + "\n")
 
     res = openai.ChatCompletion.create(**kwargs)
 
