@@ -310,11 +310,11 @@ class Coder:
             return []
         
         all_content = ""
-        all_content += self.gpt_prompts.additional_context_prefix
+        all_content += self.gpt_prompts.additional_context_prefix + "\n"
         all_content += content
         
         messages = [
-            dict(role="user", content=content),
+            dict(role="user", content=all_content),
             dict(role="assistant", content="Ok."),
             dict(role="system", content=self.fmt_system_reminder()),
         ]

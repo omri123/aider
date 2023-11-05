@@ -1,7 +1,8 @@
 from github import Github
 
+
 class GithubRepo:
-    """ A class for interacting with a github repository. """
+    """A class for interacting with a github repository."""
 
     def __init__(self, token, repo_name) -> None:
         self.github = Github(token)
@@ -20,10 +21,19 @@ class GithubRepo:
             issue = self.repo.get_issue(number=issue_number)
         except:
             return ""
-        
-        issue_content = f"Title: {issue.title}\n\nBody:\n{issue.body}\n\nComments:\n"
 
-        for comment in issue.get_comments():
-            issue_content += f"{comment.user.login}: {comment.body}\n"
+        issue_content = ""
+        if issue.title:
+            issue_content += f"Title: {issue.title}\n\n"
+        if issue.body:
+            issue_content += f"Body:\n{issue.body}\n\n"
+
+        comments = issue.get_comments()
+        if comments.totalCount > 0:
+            issue_content += "Comments:\n"
+            for comment in issue.get_comments():
+                issue_content += f"{comment.user.login}: {comment.body}\n"
+
+            issue_content += "\n"
 
         return issue_content
