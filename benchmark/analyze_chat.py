@@ -36,7 +36,7 @@ def analyze_chat(filename):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dir", "-d", help="The chat log directory")
-    parser.add_argument("--out", "-o", help="The output csv file")
+    parser.add_argument("--out", "-o", help="The output csv file", default="")
     args = parser.parse_args()
 
     results = []
@@ -62,7 +62,23 @@ def main():
         results.append(row)
 
     df = pd.DataFrame(results)
-    df.to_csv(args.out, index=False)
+    if args.out:
+        df.to_csv(args.out, index=False)
+
+    malformed_chats = (df["Malformed-1"] + df["Malformed-2"]).astype(bool).sum()
+    malformed_1 = df["Malformed-1"].astype(bool).sum()
+    malformed_2 = df["Malformed-2"].astype(bool).sum()
+    
+    pass_1 = len(df[df["pass-1"] == True])
+    pass_2 = len(df[df["pass-2"] == True])
+    print("Malformed chats: {}".format(malformed_chats))
+    print("Pass 1:          {}".format(pass_1))
+    print("Pass 2:          {}".format(pass_2))
+    print("Pass in total:   {}".format(pass_1 + pass_2))
+    print()
+    print()
+    print("Malformed 1:     {}".format(malformed_1))
+    print("Malformed 2:     {}".format(malformed_2))
 
 
 if __name__ == "__main__":
