@@ -69,12 +69,15 @@ def main():
     malformed_1 = df["Malformed-1"].astype(bool).sum()
     malformed_2 = df["Malformed-2"].astype(bool).sum()
     
+    timeout_chats = (df["timeout-1"] + df["timeout-2"]).astype(bool).sum()
+    
     pass_1 = len(df[df["pass-1"] == True])
     pass_2 = len(df[df["pass-2"] == True])
     print("Malformed chats: {}".format(malformed_chats))
     print("Pass 1:          {}".format(pass_1))
     print("Pass 2:          {}".format(pass_2))
     print("Pass in total:   {}".format(pass_1 + pass_2))
+    print("Timeout chats:   {}".format(timeout_chats))
     print()
     print()
     print("Malformed 1:     {}".format(malformed_1))
