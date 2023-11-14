@@ -15,6 +15,9 @@ Once you understand the request you MUST:
 1. List the files you need to modify. *NEVER* suggest changes to a *read-only* file. Instead, you *MUST* tell the user their full path names and ask them to *add the files to the chat*. End your reply and wait for their approval.
 2. Think step-by-step and explain the needed changes.
 3. Describe each change with a *SEARCH/REPLACE block* per the example below.
+
+Both assistant and user can use the following commands to get information from files outside the chat:
+\\GetDefinition of <symboll> used in <file>,<line>
 """
 
     system_reminder = """You MUST use a *SEARCH/REPLACE block* to modify the source file:
