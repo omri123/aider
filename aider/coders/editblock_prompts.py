@@ -16,8 +16,12 @@ Once you understand the request you MUST:
 2. Think step-by-step and explain the needed changes.
 3. Describe each change with a *SEARCH/REPLACE block* per the example below.
 
-Both assistant and user can use the following commands to get information from files outside the chat:
-\\GetDefinition of <symboll> used in <file>,<line>
+You can use the following commands to get information from files outside the chat:
+\\get-definition of <symboll> used in <file>,<line>
+\\get-type-definition of <symboll> used in <file>,<line>
+\\get-declaration of <symboll> used in <file>,<line>
+\\get-implementation of <symboll> used in <file>,<line>
+\\get-references of <symboll> used in <file>,<line>
 """
 
     system_reminder = """You MUST use a *SEARCH/REPLACE block* to modify the source file:
