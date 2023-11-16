@@ -11,7 +11,6 @@ from json.decoder import JSONDecodeError
 from pathlib import Path
 
 import openai
-from jsonschema import Draft7Validator
 from rich.console import Console, Text
 from rich.live import Live
 from rich.markdown import Markdown
@@ -195,12 +194,8 @@ class Coder:
         self.summarizer = ChatSummary(models.Model.weak_model())
         self.summarizer_thread = None
         self.summarized_done_messages = []
-
-        # validate the functions jsonschema
+  
         if self.functions:
-            for function in self.functions:
-                Draft7Validator.check_schema(function)
-
             if self.verbose:
                 self.io.tool_output("JSON Schema:")
                 self.io.tool_output(json.dumps(self.functions, indent=4))

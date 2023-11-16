@@ -2,11 +2,9 @@ configargparse
 GitPython
 openai
 tiktoken
-jsonschema
+scipy
 rich
 prompt_toolkit
-numpy
-scipy
 backoff
 pathspec
 networkx
@@ -16,3 +14,4 @@ packaging
 sounddevice
 soundfile
 PyYAML
+PyGithub
