@@ -297,18 +297,9 @@ class Coder:
         return prompt
     
     def get_additional_context_content(self):
-        if not self.additional_context:
-            return ""
-        
-        prompt = ""
         for title, content in self.additional_context.items():
-            prompt += "\n"
-            prompt += title
-            prompt += f"\n{self.fence[0]}\n"
-            prompt += content
-            prompt += f"{self.fence[1]}\n"
-
-        return prompt
+            content = title + "\n" + content
+            yield content
 
     def get_repo_map(self):
         if not self.repo_map:
@@ -319,20 +310,14 @@ class Coder:
         return repo_content
     
     def get_additional_context_messages(self):
-        content = self.get_additional_context_content()
-        if not content:
-            return []
-        
-        all_content = ""
-        all_content += self.gpt_prompts.additional_context_prefix
-        all_content += content
-        
-        messages = [
-            dict(role="user", content=content),
-            dict(role="assistant", content="Ok."),
-            dict(role="system", content=self.fmt_system_reminder()),
-        ]
-
+        messages = []
+        for content in self.get_additional_context_content():
+            content = content.format(fence=self.fence)
+            content = self.gpt_prompts.additional_context_prefix + content
+            messages.append(dict(role="user", content=content))
+            messages.append(dict(role="assistant", content="Ok."))
+            
+        messages.append(dict(role="system", content=self.fmt_system_reminder()))
         return messages        
 
     def get_files_messages(self):

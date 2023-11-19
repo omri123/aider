@@ -252,6 +252,12 @@ class Commands:
             if partial.lower() in fname.lower():
                 yield Completion(fname, start_position=-len(partial))
         
+
+        for hexsha in self.coder.repo.get_commits_hashes():
+            commit_id = R"\commit-" + hexsha[:7]
+            if partial in commit_id:
+                yield Completion(commit_id, start_position=-len(partial))
+        
         if self.coder.github_repo:
             for issue_number in self.coder.github_repo.get_issue_numbers():
                 issue_id = R"\issue-" + str(issue_number)
@@ -291,6 +297,15 @@ class Commands:
         self.coder.additional_context[R"\issue-" + str(issue_number)] = issue_content
         self.io.tool_output(f"Added issue {issue_number} to the chat")
 
+    def add_commit(self, hexsha):
+        commit_content = self.coder.repo.get_commit_content(hexsha)
+        if not commit_content:
+            self.io.tool_error(f"Unable to find commit {hexsha}")
+            return
+        self.coder.additional_context[R"\commit-" + hexsha[:7]] = commit_content
+        self.io.tool_output(f"Added commit {hexsha} to the chat")
+        
+
     def cmd_add(self, args):
         "Add files to the chat so GPT can edit them or review them in detail"
 
@@ -305,6 +320,10 @@ class Commands:
             if word.startswith(R"\issue-"):
                 issue_number = int(word[7:])
                 self.add_issue(issue_number)
+                continue
+            if word.startswith(R"\commit-"):
+                hexsha = word[8:]
+                self.add_commit(hexsha)
                 continue
             if Path(word).is_absolute():
                 fname = Path(word)

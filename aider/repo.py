@@ -1,5 +1,6 @@
 import os
 from pathlib import Path, PurePosixPath
+import difflib
 
 import git
 import pathspec
@@ -7,8 +8,28 @@ import pathspec
 from aider import models, prompts, utils
 from aider.sendchat import simple_send_with_retries
 
-from .dump import dump  # noqa: F401
 
+class AiderDiff:
+    def __init__(self, change_type, path_a, path_b, content_a, content_b, start_a):
+        self.change_type = change_type
+        self.path_a = path_a
+        self.path_b = path_b
+        self.content_a = content_a
+        self.content_b = content_b
+        self.start_a = start_a
+    
+    def __repr__(self) -> str:
+        return f"AiderDiff:\ntyps: {self.change_type}\npath_a: {self.path_a}\npath_b: {self.path_b}\ncontent_a:\n{self.content_a}\ncontent_b:\n{self.content_b}\nstart_a: {self.start_a}"
+
+def add_line_numbers(content, start_line):
+    lines = content.splitlines()
+    lines_view = []
+    digits = 4  # number of digits in line number. TODO: make this configurable
+    for i, line in enumerate(lines):
+        lines_view.append(f"{i+start_line:{digits}}|{lines[i]}")
+    
+    code_view = "\n".join(lines_view)
+    return code_view
 
 class GitRepo:
     repo = None
@@ -233,3 +254,94 @@ class GitRepo:
             return True
 
         return self.repo.is_dirty(path=path)
+
+    def get_commits_hashes(self):
+        for commit in self.repo.iter_commits():
+            yield commit.hexsha
+
+    def get_commit_content(self, hash):
+        """Get diff for a commit, presented as search/replace blocks."""
+        import io
+        commit_a = self.repo.commit(hash + "^")
+        commit_b = self.repo.commit(hash)
+        diff = commit_a.diff(commit_b, create_patch=False)
+        
+        all_diff_blocks = [] # list of AiderDiff objects
+        for change in diff:
+            print(change.a_path)
+            print(change.b_path)
+            
+            blob_a = commit_a.tree / change.a_path
+            blob_b = commit_b.tree / change.b_path
+            
+            print(change.change_type)
+
+            # Retrieve contents of targetfile
+            with io.BytesIO(blob_a.data_stream.read()) as f:
+                content_a = f.read().decode('utf-8')
+
+            with io.BytesIO(blob_b.data_stream.read()) as f:
+                content_b = f.read().decode('utf-8')
+            
+            matcher = difflib.SequenceMatcher(None, content_a.splitlines(keepends=True), content_b.splitlines(keepends=True))
+            matching_blocks = list(matcher.get_matching_blocks()) # block is (i, j, n) such that a[i:i+n] == b[j:j+n]
+            print(matching_blocks)
+            unmaching_blocks = [] # this is the list of changes! (i, ni, j, nj) such that block is i:i+ni in a and j:j+nj in b
+            for i, mblock in enumerate(matching_blocks):
+                if i == 0:
+                    prev = (0, 0, 0)
+                else:
+                    prev = matching_blocks[i-1]
+
+                prev_end_a = prev[0]+prev[2]
+                prev_end_b = prev[1]+prev[2]
+                unmaching_blocks.append((prev_end_a, mblock[0]-prev_end_a, prev_end_b, mblock[1]-prev_end_b))
+            
+            # merge near-by blocks
+            maximal_distance = 3
+            merged_blocks = []
+            for i, block in enumerate(unmaching_blocks):
+                if i == 0:
+                    merged_blocks.append(block)
+                else:
+                    prev = merged_blocks[-1]
+                    distance_a = block[0] - prev[0] - prev[1]
+                    distance_b = block[2] - prev[2] - prev[3]
+                    if distance_a < maximal_distance or distance_b < maximal_distance:
+                        merged_blocks[-1] = (prev[0], block[0] + block[1] - prev[0], prev[2], block[2] + block[3] - prev[2])
+                    else:
+                        merged_blocks.append(block)
+            
+            for block in merged_blocks:
+                start_a = block[0]
+                end_a = block[0] + block[1]
+                start_b = block[2]
+                end_b = block[2] + block[3]
+                if start_a == end_a and start_b == end_b:
+                    continue
+                content_a_lines = content_a.splitlines(keepends=False)[start_a:end_a]
+                content_b_lines = content_b.splitlines(keepends=False)[start_b:end_b]
+                all_diff_blocks.append(AiderDiff(change.change_type, change.a_path, change.b_path, "\n".join(content_a_lines), "\n".join(content_b_lines), start_a))
+        
+        content = ""
+        for block in all_diff_blocks:
+            if not (block.change_type == "A" or block.change_type == "D" or block.change_type == "M"):
+                self.io.tool_error(f"Unsupported change type: {block.change_type}")
+                return ""
+            if block.path_a != block.path_b:
+                self.io.tool_error(f"Unsupported change, path_a != path_b: {block.path_a} != {block.path_b}")
+                return ""
+            content += "{fence[0]}\n"
+            content += f"{block.path_a}\n"
+            content += f"<<<<<<< SEARCH\n"
+            content += f"{add_line_numbers(block.content_a, block.start_a)}\n"
+            content += f"=======\n"
+            content += f"{add_line_numbers(block.content_b, block.start_a)}\n"
+            content += f">>>>>>> REPLACE\n"
+            content += "{fence[1]}\n"
+        
+        return content
+
+if __name__ == "__main__":
+    repo = GitRepo(None, [], "/home/omribloch/repos/aider")
+    print(repo.get_commit_diff("d65547d"))
