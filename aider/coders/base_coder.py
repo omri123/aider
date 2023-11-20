@@ -312,7 +312,8 @@ class Coder:
     def get_additional_context_messages(self):
         messages = []
         for content in self.get_additional_context_content():
-            content = content.format(fence=self.fence)
+            content = content.replace("{fence[0]}", self.fence[0]) # can't do partial formatting
+            content = content.replace("{fence[1]}", self.fence[1])
             content = self.gpt_prompts.additional_context_prefix + content
             messages.append(dict(role="user", content=content))
             messages.append(dict(role="assistant", content="Ok."))
