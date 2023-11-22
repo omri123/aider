@@ -331,17 +331,20 @@ class GitRepo:
             if block.path_a != block.path_b:
                 self.io.tool_error(f"Unsupported change, path_a != path_b: {block.path_a} != {block.path_b}")
                 return ""
-            content += "\n"
-            content += "{fence[0]}\n"
-            content += f"{block.path_a}\n"
-            content += f"<<<<<<< SEARCH\n"
-            content += f"{add_line_numbers(block.content_a, block.start_a)}\n"
-            content += f"=======\n"
-            content += f"{add_line_numbers(block.content_b, block.start_a)}\n"
-            content += f">>>>>>> REPLACE\n"
-            content += "{fence[1]}\n"
-        
+            content = content + format_search_replace_block(block.path_a, block.content_a, block.content_b, block.start_a)
         return content
+
+def format_search_replace_block(path, search, replace, search_start_line):
+    content = ""
+    content += "\n"
+    content += "{fence[0]}\n"
+    content += f"{block.path_a}\n"
+    content += f"<<<<<<< SEARCH\n"
+    content += f"{add_line_numbers(block.content_a, block.start_a)}\n"
+    content += f"=======\n"
+    content += f"{add_line_numbers(block.content_b, block.start_a)}\n"
+    content += f">>>>>>> REPLACE\n"
+    content += "{fence[1]}\n"
 
 if __name__ == "__main__":
     repo = GitRepo(None, [], "/home/omribloch/repos/aider")
