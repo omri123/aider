@@ -331,6 +331,7 @@ class GitRepo:
             if block.path_a != block.path_b:
                 self.io.tool_error(f"Unsupported change, path_a != path_b: {block.path_a} != {block.path_b}")
                 return ""
+            content += "\n"
             content += "{fence[0]}\n"
             content += f"{block.path_a}\n"
             content += f"<<<<<<< SEARCH\n"
