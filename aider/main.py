@@ -364,6 +364,15 @@ def main(argv=None, input=None, output=None, force_git_root=None):
     )
 
     ##########
+    vscode_group = parser.add_argument_group("vscode integration settings", description="These settings are only used when running from vscode-aider extension")
+    vscode_group.add_argument(
+        "--port",
+        metavar="PORT",
+        default="",
+        help="Specify the port to access extension server, if none, not looking for server"
+    )
+
+    ##########
     other_group = parser.add_argument_group("Other Settings")
     other_group.add_argument(
         "--version",
@@ -566,6 +575,7 @@ def main(argv=None, input=None, output=None, force_git_root=None):
             voice_language=args.voice_language,
             aider_ignore_file=args.aiderignore,
             github_repo=github_repo,
+            port=args.port
         )
     except ValueError as err:
         io.tool_error(str(err))

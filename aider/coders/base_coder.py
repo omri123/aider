@@ -22,6 +22,8 @@ from aider.io import InputOutput
 from aider.repo import GitRepo
 from aider.repomap import RepoMap
 from aider.sendchat import send_with_retries
+import aider.vscode as vscode
+import functools
 
 from ..dump import dump  # noqa: F401
 
@@ -103,6 +105,7 @@ class Coder:
         voice_language=None,
         aider_ignore_file=None,
         github_repo=None,
+        port=None
     ):
         if not fnames:
             fnames = []
@@ -201,6 +204,14 @@ class Coder:
                 self.io.tool_output(json.dumps(self.functions, indent=4))
 
         self.github_repo = github_repo
+        if not port:
+            self.io.tool_output("VSCode: disabled")
+            self.get_completions_from_vscode = None
+            self.get_content_from_vscode = None
+        else:
+            self.io.tool_output("VSCode: enabled")
+            self.get_completions_from_vscode = functools.partial(vscode.getTitles, port=port)
+            self.get_content_from_vscode = functools.partial(vscode.getContent, port=port)
 
     def find_common_root(self):
         if len(self.abs_fnames) == 1:

@@ -264,6 +264,12 @@ class Commands:
                 if partial.lower() in issue_id:
                     yield Completion(issue_id, start_position=-len(partial))
 
+        if self.coder.get_completions_from_vscode:
+            for title in self.coder.get_completions_from_vscode():
+                title = "\\" + title
+                if partial.lower() in title.lower():
+                    yield Completion(title, start_position=-len(partial))
+
     def glob_filtered_to_repo(self, pattern):
         try:
             raw_matched_files = list(Path(self.coder.root).glob(pattern))
@@ -317,6 +323,18 @@ class Commands:
 
         filenames = parse_quoted_filenames(args)
         for word in filenames:
+            # first, try to get the content from vscode server.
+            # if that fails, try \issue and \commit.
+            # In the future we will move \issue and \commit and just use vscode server.
+            if self.coder.get_content_from_vscode:
+                content = self.coder.get_content_from_vscode(title=word[1:])
+                if content:
+                    self.coder.additional_context[word] = content
+                    self.io.tool_output(f'Added context item "{word}" to the chat')
+                    continue
+                else:
+                    self.io.tool_error(f"Unable to find title {word[1:]}")
+                    continue
             if word.startswith(R"\issue-"):
                 issue_number = int(word[7:])
                 self.add_issue(issue_number)
