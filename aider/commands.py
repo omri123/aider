@@ -404,6 +404,28 @@ class Commands:
                 if abs_fname in self.coder.abs_fnames:
                     self.coder.abs_fnames.remove(abs_fname)
                     self.io.tool_output(f"Removed {matched_file} from the chat")
+    
+    def completions_show(self, partial):
+        return self.completions_drop(partial)
+    
+    def cmd_show(self, args):
+        "Show the content of files or context items added to the chat"
+        if not args.strip():
+            self.io.tool_error("No file or context item specified.")
+            return
+
+        filenames = parse_quoted_filenames(args)
+        for word in filenames:
+            if word in self.coder.additional_context.keys():
+                self.io.tool_output(self.coder.additional_context[word])
+                continue
+
+            abs_fname = self.coder.abs_root_path(word)
+            if (abs_fname in self.coder.abs_fnames):
+                self.io.tool_output(self.io.read_text(abs_fname))
+                continue
+            
+            self.io.tool_error(f"{word} is not in the chat")
 
     def cmd_git(self, args):
         "Run a git command"

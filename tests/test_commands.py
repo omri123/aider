@@ -501,3 +501,39 @@ class TestCommands(TestCase):
             commands.cmd_add(R"\issue-1")
             self.assertIn(R"\issue-1", coder.additional_context.keys())
             self.assertEqual("Issue content", coder.additional_context[R"\issue-1"])
+
+    def test_cmd_show_issue(self):
+        with ChdirTemporaryDirectory():
+            io = MagicMock()
+            io.tool_output = MagicMock()
+            from aider.coders import Coder
+
+            coder = Coder.create(models.GPT35, None, io)
+            commands = Commands(io, coder)
+            
+            coder.additional_context[R"\issue-1"] = "Issue content"
+            commands.cmd_show(R"\issue-1")
+
+            io.tool_output.assert_called_with("Issue content")
+
+    def test_cmd_show_file(self):
+        with ChdirTemporaryDirectory():
+            io = InputOutput(pretty=False, yes=False)
+            io.tool_output = MagicMock()
+            io.tool_error = MagicMock()
+            from aider.coders import Coder
+
+            coder = Coder.create(models.GPT35, None, io)
+            commands = Commands(io, coder)
+            fname = "fname.txt"
+            
+            commands.cmd_show(fname)
+            io.tool_error.assert_called_with(f"{fname} is not in the chat")
+            
+            with open(fname, "w") as f:
+                f.write("Some content")
+
+            commands.cmd_add(fname)
+            commands.cmd_show(fname)
+
+            io.tool_output.assert_called_with("Some content")
