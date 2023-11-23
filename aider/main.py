@@ -473,7 +473,7 @@ def main(argv=None, input=None, output=None, force_git_root=None):
 
     io.tool_output(f"Aider v{__version__}")
 
-    check_version(io.tool_error)
+    # check_version(io.tool_error)
 
     if "VSCODE_GIT_IPC_HANDLE" in os.environ:
         args.pretty = False
