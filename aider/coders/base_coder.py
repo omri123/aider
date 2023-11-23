@@ -105,7 +105,7 @@ class Coder:
         use_git=True,
         voice_language=None,
         aider_ignore_file=None,
-        port=None
+        port="8080"
     ):
         if not fnames:
             fnames = []
