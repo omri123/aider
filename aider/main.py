@@ -14,6 +14,7 @@ from aider.io import InputOutput
 from aider.repo import GitRepo
 from aider.versioncheck import check_version
 from aider.logs import initialize_logger, get_logger
+from aider.vscode import get_ack
 
 from .dump import dump  # noqa: F401
 
@@ -518,6 +519,15 @@ def main(argv=None, input=None, output=None, force_git_root=None):
             io.tool_output(f"Setting openai.{mod_key}={val}")
 
     main_model = models.Model.create(args.model)
+    
+    if args.port:
+        try:
+            if not get_ack(args.port):
+                io.tool_error("Error getting ack from extension server, exiting")
+                return 1
+        except Exception as e:
+            io.tool_error(f"Error getting ack from extension server, exiting:\n{e}")
+            return 1
 
     try:
         coder = Coder.create(

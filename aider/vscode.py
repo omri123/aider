@@ -7,6 +7,19 @@ This client is meant to be used by "add" command and its auto-completion.
 import requests
 
 
+def get_ack(port):
+    """verify that the server is online
+
+    URL format is http://localhost:8080/add/ack
+    """
+
+    URL = "http://localhost:" + str(port) + "/add" + "/ack"
+    r = requests.get(url=URL, timeout=1)
+    if r.status_code != 200:
+        raise Exception("Error getting ack from extension server, status code: " + str(r.status_code))
+    return True
+
+
 def get_prefixes(port):
     """return a list of reserved title prefixes
 
