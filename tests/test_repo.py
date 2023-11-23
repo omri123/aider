@@ -260,3 +260,137 @@ class TestRepo(unittest.TestCase):
             git_repo = GitRepo(InputOutput(), None, None)
 
             git_repo.commit(fnames=[str(fname)])
+
+
+    def change_and_commit(self, repo, content, msg):
+        fname = "file.txt"
+        with open(fname, "w") as f:
+            f.write(content)
+        repo.git.add(fname)
+        repo.git.commit("-m", msg)
+
+    def test_get_commit_content(self):
+        with GitTemporaryDirectory():
+            # new repo
+            raw_repo = git.Repo()
+
+            # add it, but no commits at all in the raw_repo yet
+            content = "new file (content)"
+            self.change_and_commit(raw_repo, content, msg="new file (message)")
+            content = "modify file (content)"
+            self.change_and_commit(raw_repo, content, msg="modify file (message)")
+            
+            import os
+            fname = "file.txt"
+            os.remove(fname)
+            raw_repo.git.add(fname)
+            raw_repo.git.commit("-m", "delete file (message)")
+
+            git_repo = GitRepo(InputOutput(), None, None)
+
+            content = git_repo.get_commit_content("HEAD")
+            self.assertEqual("delete", content)
+            
+            content = git_repo.get_commit_content("HEAD~1")
+            self.assertEqual("modify", content)
+            
+            content = git_repo.get_commit_content("HEAD~2")
+            self.assertIn("new", content)
+
+
+    def test_get_commit_content_blocks_in_edge(self):
+        with GitTemporaryDirectory():
+            # new repo
+            raw_repo = git.Repo()
+
+            # add it, but no commits at all in the raw_repo yet
+            fname = "file.txt"
+            content = """
+            line 2 original
+            line 3 original
+            line 4 original
+            line 5 original
+            line 6 original
+            """
+            self.change_and_commit(raw_repo, content, msg="first commit")
+            content = """
+            line 2 new
+            line 3 original
+            line 4 original
+            line 5 original
+            line 6 new
+            """
+            self.change_and_commit(raw_repo, content, msg="second commit")
+
+            git_repo = GitRepo(InputOutput(), None, None)
+
+            content = git_repo.get_commit_content("HEAD")
+            self.assertEqual("2, 6 not together", content)
+            
+    def test_get_commit_content_block_in_middle(self):
+        with GitTemporaryDirectory():
+            # new repo
+            raw_repo = git.Repo()
+
+            # add it, but no commits at all in the raw_repo yet
+            fname = "file.txt"
+            content = """
+            line 2 original
+            line 3 original
+            line 4 original
+            """
+            self.change_and_commit(raw_repo, content, msg="first commit")
+            content = """
+            line 2 original
+            line 3 new
+            line 4 original
+            """
+            self.change_and_commit(raw_repo, content, msg="second commit")
+            
+            with open(fname, "w") as f:
+                f.write("modify file (content)")
+            raw_repo.git.add(fname)
+            raw_repo.git.commit("-m", "modify file (message)")
+
+            git_repo = GitRepo(InputOutput(), None, None)
+
+            content = git_repo.get_commit_content("HEAD")
+            self.assertEqual("3", content)
+            
+    def test_get_commit_content_merge_blocks(self):
+        with GitTemporaryDirectory():
+            # new repo
+            raw_repo = git.Repo()
+
+            # add it, but no commits at all in the raw_repo yet
+            fname = "file.txt"
+            original_content = """
+            line 2 original
+            line 3 original
+            line 4 original
+            line 5 original
+            line 6 original
+            """
+            self.change_and_commit(raw_repo, original_content, msg="first commit")
+            new_content = """
+            line 2 new
+            line 3 original
+            line 4 original
+            line 5 new
+            """
+            self.change_and_commit(raw_repo, new_content, msg="second commit")
+
+            git_repo = GitRepo(InputOutput(), None, None)
+
+            content = git_repo.get_commit_content("HEAD")
+            self.assertEqual("2, 5 together", content)
+            
+    def test_get_commit_content_commit_message(self):
+        with GitTemporaryDirectory():
+            raw_repo = git.Repo()
+            content = "I am the content"
+            self.change_and_commit(raw_repo, content, msg="I am message 1")
+            self.change_and_commit(raw_repo, content + " vs", msg="I am message 2")
+            git_repo = GitRepo(InputOutput(), None, None)
+            content = git_repo.get_commit_content("HEAD")
+            self.assertIn("I am message 2", content)

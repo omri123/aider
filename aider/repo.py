@@ -1,6 +1,9 @@
 import os
 from pathlib import Path, PurePosixPath
 import difflib
+import io
+import difflib
+from typing import List
 
 import git
 import pathspec
@@ -20,6 +23,45 @@ class AiderDiff:
     
     def __repr__(self) -> str:
         return f"AiderDiff:\ntyps: {self.change_type}\npath_a: {self.path_a}\npath_b: {self.path_b}\ncontent_a:\n{self.content_a}\ncontent_b:\n{self.content_b}\nstart_a: {self.start_a}"
+
+def get_content(commit, path):
+    try:
+        blob = commit.tree / path
+    except KeyError:
+        return ""
+    with io.BytesIO(blob.data_stream.read()) as f:
+        return f.read().decode('utf-8')
+
+
+def merge_unmatching_blocks(unmatching_blocks):
+    maximal_distance = 3
+    merged_blocks = []
+    for i, block in enumerate(unmatching_blocks):
+        if i == 0:
+            merged_blocks.append(block)
+        else:
+            prev = merged_blocks[-1]
+            distance_a = block[0] - prev[0] - prev[1]
+            distance_b = block[2] - prev[2] - prev[3]
+            if distance_a < maximal_distance or distance_b < maximal_distance:
+                merged_blocks[-1] = (prev[0], block[0] + block[1] - prev[0], prev[2], block[2] + block[3] - prev[2])
+            else:
+                merged_blocks.append(block)
+    return merged_blocks
+
+def create_diff_blocks(blocks_indecies, content_a, content_b, change)-> List[AiderDiff]: 
+    # extract diff blocks from content using indecies.
+    # blocks_indecies is a list of tuples (start_a, len_a, start_b, len_b)
+    diff_blocks = []
+    for (start_a, len_a, start_b, len_b) in blocks_indecies:
+        end_a = start_a + len_a
+        end_b = start_b + len_b
+        if start_a == end_a and start_b == end_b:
+            continue
+        content_a_lines = content_a.splitlines(keepends=False)[start_a:end_a]
+        content_b_lines = content_b.splitlines(keepends=False)[start_b:end_b]
+        diff_blocks.append(AiderDiff(change.change_type, change.a_path, change.b_path, "\n".join(content_a_lines), "\n".join(content_b_lines), start_a))
+    return diff_blocks
 
 def add_line_numbers(content, start_line):
     lines = content.splitlines()
@@ -261,69 +303,31 @@ class GitRepo:
 
     def get_commit_content(self, hash):
         """Get diff for a commit, presented as search/replace blocks."""
-        import io
         commit_a = self.repo.commit(hash + "^")
         commit_b = self.repo.commit(hash)
-        diff = commit_a.diff(commit_b, create_patch=False)
-        
+        diff = commit_a.diff(commit_b, create_patch=False)        
         all_diff_blocks = [] # list of AiderDiff objects
         for change in diff:
-            print(change.a_path)
-            print(change.b_path)
-            
-            blob_a = commit_a.tree / change.a_path
-            blob_b = commit_b.tree / change.b_path
-            
-            print(change.change_type)
-
-            # Retrieve contents of targetfile
-            with io.BytesIO(blob_a.data_stream.read()) as f:
-                content_a = f.read().decode('utf-8')
-
-            with io.BytesIO(blob_b.data_stream.read()) as f:
-                content_b = f.read().decode('utf-8')
-            
+            content_a = get_content(commit_a, change.a_path)
+            content_b = get_content(commit_b, change.b_path)
             matcher = difflib.SequenceMatcher(None, content_a.splitlines(keepends=True), content_b.splitlines(keepends=True))
             matching_blocks = list(matcher.get_matching_blocks()) # block is (i, j, n) such that a[i:i+n] == b[j:j+n]
-            print(matching_blocks)
-            unmaching_blocks = [] # this is the list of changes! (i, ni, j, nj) such that block is i:i+ni in a and j:j+nj in b
+            unmatching_blocks = [] # this is the list of changes! (i, ni, j, nj) such that block is i:i+ni in a and j:j+nj in b
             for i, mblock in enumerate(matching_blocks):
                 if i == 0:
                     prev = (0, 0, 0)
                 else:
                     prev = matching_blocks[i-1]
-
                 prev_end_a = prev[0]+prev[2]
                 prev_end_b = prev[1]+prev[2]
-                unmaching_blocks.append((prev_end_a, mblock[0]-prev_end_a, prev_end_b, mblock[1]-prev_end_b))
-            
-            # merge near-by blocks
-            maximal_distance = 3
-            merged_blocks = []
-            for i, block in enumerate(unmaching_blocks):
-                if i == 0:
-                    merged_blocks.append(block)
-                else:
-                    prev = merged_blocks[-1]
-                    distance_a = block[0] - prev[0] - prev[1]
-                    distance_b = block[2] - prev[2] - prev[3]
-                    if distance_a < maximal_distance or distance_b < maximal_distance:
-                        merged_blocks[-1] = (prev[0], block[0] + block[1] - prev[0], prev[2], block[2] + block[3] - prev[2])
-                    else:
-                        merged_blocks.append(block)
-            
-            for block in merged_blocks:
-                start_a = block[0]
-                end_a = block[0] + block[1]
-                start_b = block[2]
-                end_b = block[2] + block[3]
-                if start_a == end_a and start_b == end_b:
-                    continue
-                content_a_lines = content_a.splitlines(keepends=False)[start_a:end_a]
-                content_b_lines = content_b.splitlines(keepends=False)[start_b:end_b]
-                all_diff_blocks.append(AiderDiff(change.change_type, change.a_path, change.b_path, "\n".join(content_a_lines), "\n".join(content_b_lines), start_a))
+                unmatching_blocks.append((prev_end_a, mblock[0]-prev_end_a, prev_end_b, mblock[1]-prev_end_b))
+            merged_blocks = merge_unmatching_blocks(unmatching_blocks)
+            all_diff_blocks.extend(create_diff_blocks(merged_blocks, content_a, content_b, change))
         
         content = ""
+        content += f"Commit {hash}\n"
+        content += f"From: {commit_b.author.name} <{commit_b.author.email}>\n"
+        content += f"Commit message: {commit_b.message}\n"
         for block in all_diff_blocks:
             if not (block.change_type == "A" or block.change_type == "D" or block.change_type == "M"):
                 self.io.tool_error(f"Unsupported change type: {block.change_type}")
@@ -331,21 +335,19 @@ class GitRepo:
             if block.path_a != block.path_b:
                 self.io.tool_error(f"Unsupported change, path_a != path_b: {block.path_a} != {block.path_b}")
                 return ""
-            content = content + format_search_replace_block(block.path_a, block.content_a, block.content_b, block.start_a)
+            content += format_search_replace_block(block.path_a, block.content_a, block.content_b, block.start_a)
         return content
 
 def format_search_replace_block(path, search, replace, search_start_line):
     content = ""
     content += "\n"
     content += "{fence[0]}\n"
-    content += f"{block.path_a}\n"
+    content += f"{path}\n"
     content += f"<<<<<<< SEARCH\n"
-    content += f"{add_line_numbers(block.content_a, block.start_a)}\n"
+    content += f"{add_line_numbers(search, search_start_line)}\n"
     content += f"=======\n"
-    content += f"{add_line_numbers(block.content_b, block.start_a)}\n"
+    content += f"{add_line_numbers(replace, search_start_line)}\n"
     content += f">>>>>>> REPLACE\n"
     content += "{fence[1]}\n"
-
-if __name__ == "__main__":
-    repo = GitRepo(None, [], "/home/omribloch/repos/aider")
-    print(repo.get_commit_diff("d65547d"))
+    return content
+        
