@@ -15,6 +15,8 @@ from pygments.util import ClassNotFound
 from rich.console import Console
 from rich.text import Text
 
+from aider.logs import get_logger
+
 from .dump import dump  # noqa: F401
 
 
@@ -312,6 +314,7 @@ class InputOutput:
         message = Text(message)
         style = dict(style=self.tool_error_color) if self.tool_error_color else dict()
         self.console.print(message, **style)
+        get_logger().error(message)
 
     def tool_output(self, *messages, log_only=False):
         if messages:

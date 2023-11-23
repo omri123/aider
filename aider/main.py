@@ -347,24 +347,12 @@ def main(argv=None, input=None, output=None, force_git_root=None):
     )
 
     ##########
-    github_group = parser.add_argument_group("Github Settings")
-    github_group.add_argument(
-        "--github",
-        action=argparse.BooleanOptionalAction,
-        default=False,
-        help="Enable/disable getting information from github (default: False))",
-    )
-    github_group.add_argument(
-        "--github-token",
-        metavar="TOKEN",
-        help="Specify the Github API token",
-        env_var="GITHUB_TOKEN",
-    )
-    github_group.add_argument(
-        "--github-repo",
-        metavar="GITHUB_REPO",
-        help="Specify the Github repo to use",
-        env_var="GITHUB_REPO",
+    vscode_group = parser.add_argument_group("vscode integration settings", description="These settings are only used when running from vscode-aider extension")
+    vscode_group.add_argument(
+        "--port",
+        metavar="PORT",
+        default="",
+        help="Specify the port to access extension server, if none, not looking for server"
     )
 
     ##########
@@ -496,24 +484,6 @@ def main(argv=None, input=None, output=None, force_git_root=None):
         if args.gitignore:
             check_gitignore(git_root, io)
 
-    github_repo = None
-    if args.github:
-        if not args.github_token:
-            io.tool_error(
-                "No Github token provided. Use --github-token or setx GITHUB_TOKEN (or export"
-                " GITHUB_TOKEN)."
-            )
-            return 1
-
-        if not args.github_repo:
-            io.tool_error(
-                "No Github repo provided. Use --github-repo or setx GITHUB_REPO (or export"
-                " GITHUB_REPO)."
-            )
-            return 1
-                
-        github_repo = GithubRepo(args.github_token, args.github_repo)
-
     def scrub_sensitive_info(text):
         # Replace sensitive information with placeholder
         return text.replace(args.openai_api_key, "***")
@@ -571,7 +541,7 @@ def main(argv=None, input=None, output=None, force_git_root=None):
             use_git=args.git,
             voice_language=args.voice_language,
             aider_ignore_file=args.aiderignore,
-            github_repo=github_repo,
+            port=args.port
         )
     except ValueError as err:
         io.tool_error(str(err))

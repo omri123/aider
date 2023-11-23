@@ -7,6 +7,8 @@ from io import StringIO
 from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock
+from unittest.mock import patch
+import aider.vscode
 
 import git
 
@@ -487,22 +489,7 @@ class TestCommands(TestCase):
         commands.cmd_add("file.txt")
         self.assertEqual(coder.abs_fnames, set())
 
-    def test_cmd_add_issue(self):
-        with ChdirTemporaryDirectory():
-            io = InputOutput(pretty=False, yes=False)
-            from aider.coders import Coder
-
-            coder = Coder.create(models.GPT35, None, io)
-            coder.github_repo = MagicMock()
-            coder.github_repo.get_issue_numbers.return_value = [1]
-            coder.github_repo.get_issue_content.return_value = "Issue content"
-            commands = Commands(io, coder)
-
-            commands.cmd_add(R"\issue-1")
-            self.assertIn(R"\issue-1", coder.additional_context.keys())
-            self.assertEqual("Issue content", coder.additional_context[R"\issue-1"])
-
-    def test_cmd_show_issue(self):
+    def test_cmd_show_additional_context(self):
         with ChdirTemporaryDirectory():
             io = MagicMock()
             io.tool_output = MagicMock()
@@ -511,10 +498,10 @@ class TestCommands(TestCase):
             coder = Coder.create(models.GPT35, None, io)
             commands = Commands(io, coder)
             
-            coder.additional_context[R"\issue-1"] = "Issue content"
-            commands.cmd_show(R"\issue-1")
+            coder.additional_context[R"\title-1"] = "Content-1"
+            commands.cmd_show(R"\title-1")
 
-            io.tool_output.assert_called_with("Issue content")
+            io.tool_output.assert_called_with("Content-1")
 
     def test_cmd_show_file(self):
         with ChdirTemporaryDirectory():
@@ -537,3 +524,40 @@ class TestCommands(TestCase):
             commands.cmd_show(fname)
 
             io.tool_output.assert_called_with("Some content")
+
+    @patch('aider.vscode.get_prefixes')
+    @patch('aider.vscode.get_content')
+    def test_cmd_add_issue_via_vscode_server(self, mock_get_content, mock_get_prefixes):
+        with ChdirTemporaryDirectory():
+            io = MagicMock()
+            io.tool_output = MagicMock()
+            from aider.coders import Coder
+
+            coder = Coder.create(models.GPT35, None, io, port=8080)
+            commands = Commands(io, coder)
+            
+            mock_get_prefixes.return_value = ["issue-"]
+            mock_get_content.return_value = "Issue content"
+            commands.cmd_add(R"\issue-1")
+            
+            mock_get_content.assert_called_with(8080, "issue-1")
+            commands.cmd_show(R"\issue-1")
+            io.tool_output.assert_called_with("Issue content")
+
+    @patch('aider.vscode.get_prefixes')
+    @patch('aider.vscode.get_content')
+    def test_cmd_add_issue_via_vscode_server_404(self, mock_get_content, mock_get_prefixes):
+        with ChdirTemporaryDirectory():
+            io = MagicMock()
+            io.tool_output = MagicMock()
+            io.tool_error = MagicMock()
+            from aider.coders import Coder
+
+            coder = Coder.create(models.GPT35, None, io, port=8080)
+            commands = Commands(io, coder)
+            
+            mock_get_prefixes.return_value = ["issue-"]
+            mock_get_content.side_effect = Exception("Error getting content, status code: 404")
+            commands.cmd_add(R"\issue-1")
+            commands.cmd_show(R"\issue-1")
+            io.tool_error.assert_called_with(R"\issue-1 is not in the chat")
