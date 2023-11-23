@@ -13,6 +13,7 @@ from aider.coders import Coder
 from aider.io import InputOutput
 from aider.repo import GitRepo
 from aider.versioncheck import check_version
+from aider.logs import initialize_logger, get_logger
 
 from .dump import dump  # noqa: F401
 
@@ -106,6 +107,9 @@ def check_gitignore(git_root, io, ask=True):
 
 
 def main(argv=None, input=None, output=None, force_git_root=None):
+    initialize_logger()
+    logger = get_logger()
+    
     if argv is None:
         argv = sys.argv[1:]
 
@@ -419,6 +423,8 @@ def main(argv=None, input=None, output=None, force_git_root=None):
     )
 
     args = parser.parse_args(argv)
+    for arg in vars(args):
+         logger.info(f"argument: {arg}={getattr(args, arg)}")
 
     if args.dark_mode:
         args.user_input_color = "#32FF32"
