@@ -6,7 +6,6 @@ from pathlib import Path
 import configargparse
 import git
 import openai
-from aider.github import GithubRepo
 
 from aider import __version__, models
 from aider.coders import Coder
