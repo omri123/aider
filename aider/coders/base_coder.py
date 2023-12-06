@@ -341,7 +341,6 @@ class Coder:
         messages = [
             dict(role="user", content=all_content),
             dict(role="assistant", content="Ok."),
-            dict(role="system", content=self.fmt_system_reminder()),
         ]
 
         return messages        
