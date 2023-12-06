@@ -307,15 +307,15 @@ class Coder:
         if not self.additional_context:
             return ""
         
-        prompt = ""
-        for title, content in self.additional_context.items():
-            prompt += "\n"
-            prompt += title
-            prompt += f"\n{self.fence[0]}\n"
-            prompt += content
-            prompt += f"{self.fence[1]}\n"
+        prompt = []
+        for title, item_content in self.additional_context.items():
+            fenced_content = item_content.replace("AIDER_FENCE_0", self.fence[0]).replace("AIDER_FENCE_1", self.fence[1])
+            item_prompt = "Context item: " + title + "\n"
+            item_prompt += fenced_content
+            item_prompt += "End of context item: " + title + "\n"
+            prompt.append(item_prompt)
 
-        return prompt
+        return "\n\n".join(prompt)
 
     def get_repo_map(self):
         if not self.repo_map:
