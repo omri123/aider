@@ -16,3 +16,5 @@ packaging
 sounddevice
 soundfile
 PyYAML
+selenium
+webdriver_manager

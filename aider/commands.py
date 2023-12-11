@@ -12,6 +12,7 @@ from prompt_toolkit.completion import Completion
 from aider import prompts, voice
 from aider import vscode
 from aider.logs import get_logger
+from aider.utils import scrape
 
 from .dump import dump  # noqa: F401
 
@@ -598,7 +599,17 @@ class Commands:
                 msg['content'] = new_content
                 self.io.tool_output("Message updated.")
             else:
-                self.io.tool_output("Message not changed.")        
+                self.io.tool_output("Message not changed.")
+    
+    def cmd_web(self, args):
+        "Get a webpage as a read-only context"
+        url = args.strip()
+        if not url:
+            self.io.tool_error("No URL specified.")
+            return
+        
+        self.coder.additional_context[url] = scrape(url)
+        self.io.tool_output(f"Added {url} to the chat")
 
 
 def expand_subdir(file_path):
