@@ -148,6 +148,13 @@ class Commands:
             content = f"{relative_fname}\n```\n" + content + "```\n"
             tokens = self.coder.main_model.token_count(content)
             res.append((tokens, f"{relative_fname}", "use /drop to drop from chat"))
+        
+        # additional context
+        for key, item in self.coder.additional_context.items():
+            # approximate
+            content = f"Context item: {key}\n" + item + "END of context item: {key}\n"
+            tokens = self.coder.main_model.token_count(content)
+            res.append((tokens, f"{key}", "use /drop to drop from chat"))
 
         self.io.tool_output("Approximate context window usage, in tokens:")
         self.io.tool_output()
