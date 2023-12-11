@@ -6,7 +6,7 @@ This is a fork of [aider](https://github.com/paul-gauthier/aider). I keep it up 
 ## Features
 
 - Edit conversation history with `/hist` and `/edit_history` commands
-- Scrape a web page and add it to the chat, with `web` command
+- Scrape a web page and add it to the chat, with `/web <uri>` command
 - Integration with vscode [context server extension](https://marketplace.visualstudio.com/items?itemName=omribloch.aider-context-server) allow adding read-only context items:
   - `/add \issue-<uri>`: Add an issue to the chat.
   - `/add \references-<symbol>`: Add a list of symbol references to the chat.
